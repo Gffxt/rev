@@ -25,7 +25,7 @@ app.get("/recent", async (req: any, res: any) => {
   } catch (err: any) {
     return res.status(500).json({
       error: "Internal Error",
-      message: err.toString(),
+      message: (err && err.stack) ? err.stack : err.toString(),
     });
   }
 });

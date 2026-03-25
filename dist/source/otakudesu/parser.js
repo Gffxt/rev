@@ -1,17 +1,46 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.animeVideoSource = exports.anime = exports.genre = exports.genreList = exports.search = exports.recentRelease = void 0;
 const axios_1 = __importDefault(require("axios"));
-const cheerio_1 = __importDefault(require("cheerio"));
-const BASEURL = "https://otakudesu.ltd";
+const cheerio = __importStar(require("cheerio"));
+const BASEURL = "https://otakudesu.blog";
+const loadHtml = (data, errorMsg = "Page not found") => {
+    if (!data || typeof data !== "string" || data.trim().length === 0) {
+        throw new Error(errorMsg);
+    }
+    return cheerio.load(data);
+};
 const recentRelease = async (page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/ongoing-anime/page/${page}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found, you may request more than the maximum page");
         let maxPage = ~~$(".venutama .pagination .page-numbers:not(.prev,.next)")
             .last()
             .html();
@@ -42,7 +71,7 @@ const search = async (query, page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/?s=${query}&post_type=anime`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Anime not found, or you may request more than the maximum page");
         let maxPage = 1;
         if ($(".venutama .chivsrc li").length < 1) {
             throw new Error("Anime not found, or you may request more than the maximum page");
@@ -76,7 +105,7 @@ const genreList = async (page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/genre-list`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Genre list not found");
         $(".genres li a").each((i, el) => {
             list.push({
                 slug: $(el).attr("href")?.split("/")[2],
@@ -95,7 +124,7 @@ const genre = async (genre, page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/genres/${genre}/page/${page}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Genre not found, you may request more than the maximum page");
         let maxPage = ~~$(".venser .pagination .page-numbers:not(.prev,.next)")
             .last()
             .html();
@@ -134,7 +163,7 @@ const anime = async (slug) => {
         const base = await axios_1.default.get(`${BASEURL}/anime/${slug}`, {
             maxRedirects: 0,
         });
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Anime not found");
         if (!base.data) {
             throw new Error("Anime not found");
         }
@@ -174,7 +203,7 @@ const animeVideoSource = async (slug, ep) => {
     try {
         const formattedEp = ("00" + ep).slice(-3);
         const base = await axios_1.default.get(`${BASEURL}/episode/${slug}-episode-${formattedEp}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Episode not found");
         if (!$("#change-server > option").html()) {
             throw new Error("Episode not found");
         }

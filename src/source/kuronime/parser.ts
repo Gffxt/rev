@@ -1,15 +1,22 @@
 import axios, { Axios } from "axios";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 import type { AnimeDetails, Anime, Genre, AnimeVideo, ListAnime } from "../utils/types";
 import decryptor from "./decryptor.js";
 
-const BASEURL = "https://45.12.2.2";
+const BASEURL = "https://kuronime.sbs";
+
+const loadHtml = (data: unknown, errorMsg: string = "Page not found") => {
+  if (!data || typeof data !== "string" || data.trim().length === 0) {
+    throw new Error(errorMsg);
+  }
+  return cheerio.load(data);
+};
 
 export const recentRelease = async (page: number = 1): Promise<ListAnime> => {
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/page/${page}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found");
     if (!$(".postbody").html()) {
       throw new Error("Page not found");
     }
@@ -53,7 +60,7 @@ export const search = async (query: string, page: number = 1): Promise<ListAnime
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/anime/page/${page}/?title=${query}&order=update`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found");
     if (!$(".postbody").html()) {
       throw new Error("Page not found");
     }
@@ -92,7 +99,7 @@ export const popular = async (page: number = 1): Promise<ListAnime> => {
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/popular-anime/page/${page}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found");
     if (!$(".postbody").html()) {
       throw new Error("Page not found");
     }
@@ -128,7 +135,7 @@ export const genreList = async (page: number = 1): Promise<Genre[]> => {
   let list: Genre[] = [];
   try {
     const base = await axios.get(`${BASEURL}/genres`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found");
     if (!$(".postbody").html()) {
       throw new Error("Page not found");
     }
@@ -152,7 +159,7 @@ export const genre = async (genre: string, page: number = 1): Promise<ListAnime>
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/genres/${genre}/page/${page}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found");
     if (!$(".postbody").html()) {
       throw new Error("Page not found");
     }
@@ -188,7 +195,7 @@ export const seasonList = async (page: number = 1): Promise<Genre[]> => {
   let list: Genre[] = [];
   try {
     const base = await axios.get(`${BASEURL}/season/winter-2023`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found");
     if (!$(".postbody").html()) {
       throw new Error("Page not found");
     }
@@ -212,7 +219,7 @@ export const season = async (season: string, page: number = 1): Promise<ListAnim
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/season/${season}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found");
     if (!$(".postbody").html()) {
       throw new Error("Page not found");
     }
@@ -241,7 +248,7 @@ export const season = async (season: string, page: number = 1): Promise<ListAnim
 export const anime = async (slug: string): Promise<AnimeDetails> => {
   try {
     const base = await axios.get(`${BASEURL}/anime/${slug}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Anime not found");
     if (!$(".postbody").html()) {
       throw new Error("Anime not found");
     }
@@ -279,7 +286,7 @@ export const anime = async (slug: string): Promise<AnimeDetails> => {
 export const animeVideoSource = async (slug: string, ep: number): Promise<AnimeVideo> => {
   try {
     const base = await axios.get(`${BASEURL}/nonton-${slug}-episode-${ep}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Episode not found");
     if (!$(".postbody").html()) {
       throw new Error("Episode not found");
     }
@@ -309,15 +316,30 @@ export const animeVideoSource = async (slug: string, ep: number): Promise<AnimeV
       let videoSource: { quality: string; url: string }[] = [];
 
       const waitSrc: Promise<{ quality: string; url: string }>[] = getSrcs.map(async (el, i) => {
-        const url = await axios.get(el.file, { maxRedirects: 0 });
-        let $$$ = cheerio.load(url.data);
-        let surl = $$$("a").attr("href");
-        return {
-          quality: el.label === "HD" ? "720p" : el.label === "SD" ? "480p" : "Unknown",
-          url: surl!,
-        };
+        try {
+          const url = await axios.get(el.file, { maxRedirects: 0 });
+          let $$$ = cheerio.load(url.data);
+          let surl = $$$("a").attr("href");
+          return {
+            quality: el.label === "HD" ? "720p" : el.label === "SD" ? "480p" : "Unknown",
+            url: surl!,
+          };
+        } catch (mediaErr) {
+          // If one source fails, continue with others
+          return { quality: el.label === "HD" ? "720p" : el.label === "SD" ? "480p" : "Unknown", url: "" };
+        }
       });
-      videoSource = await Promise.all(waitSrc);
+
+      const settled = await Promise.allSettled(waitSrc);
+      videoSource = settled
+        .filter((r): r is PromiseFulfilledResult<{ quality: string; url: string }> => r.status === "fulfilled")
+        .map((r) => r.value)
+        .filter((item) => item.url);
+
+      if (videoSource.length === 0) {
+        throw new Error("No valid video source available");
+      }
+
       return {
         episode: ~~ep,
         video: videoSource,
