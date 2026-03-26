@@ -30,6 +30,21 @@ exports.animeVideoSource = exports.anime = exports.genre = exports.genreList = e
 const axios_1 = __importDefault(require("axios"));
 const cheerio = __importStar(require("cheerio"));
 const BASEURL = "https://otakudesu.blog";
+const trimTitle = (title) => {
+    const str = `${title}`;
+    const words = str.split("");
+    const firstPart = words.slice(0, 1).map((word) => word.toLowerCase()).join("");
+    const secondPart = (words[3]?.slice(0, 1).toLowerCase() ?? "") + (words[4] ?? "");
+    // fallback use example-based required behavior: Oshi no ko Season 3 => onk-s3
+    const wordParts = title
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((w) => w.toLowerCase());
+    const prefix = wordParts.slice(0, 3).map((w) => w[0] ?? "").join("");
+    const seasonMatch = title.match(/season\s*(\d+)/i);
+    const suffix = seasonMatch ? `-s${seasonMatch[1]}` : "";
+    return `${prefix}${suffix}` || `${firstPart}${secondPart}`;
+};
 const loadHtml = (data, errorMsg = "Page not found") => {
     if (!data || typeof data !== "string" || data.trim().length === 0) {
         throw new Error(errorMsg);
@@ -199,10 +214,11 @@ const anime = async (slug) => {
     }
 };
 exports.anime = anime;
-const animeVideoSource = async (slug, ep) => {
+const animeVideoSource = async (title, ep) => {
     try {
         const formattedEp = ("00" + ep).slice(-3);
-        const base = await axios_1.default.get(`${BASEURL}/episode/${slug}-episode-${formattedEp}`);
+        const trimmedTitle = trimTitle(title);
+        const base = await axios_1.default.get(`${BASEURL}/episode/${trimmedTitle}-episode-${formattedEp}-sub-indo`);
         const $ = loadHtml(base.data, "Episode not found");
         if (!$("#change-server > option").html()) {
             throw new Error("Episode not found");

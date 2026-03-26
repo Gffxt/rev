@@ -30,7 +30,7 @@ exports.animeVideoSource = exports.anime = exports.season = exports.seasonList =
 const axios_1 = __importDefault(require("axios"));
 const cheerio = __importStar(require("cheerio"));
 const decryptor_js_1 = __importDefault(require("./decryptor.js"));
-const BASEURL = "https://45.12.2.2";
+const BASEURL = "https://kuronime.sbs";
 const loadHtml = (data, errorMsg = "Page not found") => {
     if (!data || typeof data !== "string" || data.trim().length === 0) {
         throw new Error(errorMsg);
