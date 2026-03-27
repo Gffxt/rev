@@ -48,7 +48,7 @@ Start server dengan command berikut:
 npm start #atau yarn start
 ```
 
-Server akan berjalan di http://localhost:3001
+Server akan berjalan di http://localhost:4040
 
 ## List Source
 
