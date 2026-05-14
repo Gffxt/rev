@@ -93,11 +93,11 @@ app.get("/anime/:animeSlug", async (req, res) => {
         });
     }
 });
-app.get("/anime/:animeId/:episodeId", async (req, res) => {
+app.get("/anime/:animeTitle/:episodeId", async (req, res) => {
     try {
-        const id = req.params.animeId;
+        const title = req.params.animeTitle;
         const ep = req.params.episodeId;
-        const data = await (0, parser_1.animeVideoSource)(id, ep);
+        const data = await (0, parser_1.animeVideoSource)(title, ep);
         return res.status(200).json(data);
     }
     catch (err) {

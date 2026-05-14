@@ -1,18 +1,47 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.animeVideoSource = exports.anime = exports.season = exports.seasonList = exports.genre = exports.genreList = exports.popular = exports.search = exports.recentRelease = void 0;
 const axios_1 = __importDefault(require("axios"));
-const cheerio_1 = __importDefault(require("cheerio"));
+const cheerio = __importStar(require("cheerio"));
 const decryptor_js_1 = __importDefault(require("./decryptor.js"));
-const BASEURL = "https://45.12.2.2";
+const BASEURL = "https://kuronime.sbs";
+const loadHtml = (data, errorMsg = "Page not found") => {
+    if (!data || typeof data !== "string" || data.trim().length === 0) {
+        throw new Error(errorMsg);
+    }
+    return cheerio.load(data);
+};
 const recentRelease = async (page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/page/${page}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found");
         if (!$(".postbody").html()) {
             throw new Error("Page not found");
         }
@@ -56,7 +85,7 @@ const search = async (query, page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/anime/page/${page}/?title=${query}&order=update`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found");
         if (!$(".postbody").html()) {
             throw new Error("Page not found");
         }
@@ -95,7 +124,7 @@ const popular = async (page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/popular-anime/page/${page}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found");
         if (!$(".postbody").html()) {
             throw new Error("Page not found");
         }
@@ -131,7 +160,7 @@ const genreList = async (page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/genres`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found");
         if (!$(".postbody").html()) {
             throw new Error("Page not found");
         }
@@ -156,7 +185,7 @@ const genre = async (genre, page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/genres/${genre}/page/${page}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found");
         if (!$(".postbody").html()) {
             throw new Error("Page not found");
         }
@@ -192,7 +221,7 @@ const seasonList = async (page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/season/winter-2023`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found");
         if (!$(".postbody").html()) {
             throw new Error("Page not found");
         }
@@ -217,7 +246,7 @@ const season = async (season, page = 1) => {
     let list = [];
     try {
         const base = await axios_1.default.get(`${BASEURL}/season/${season}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Page not found");
         if (!$(".postbody").html()) {
             throw new Error("Page not found");
         }
@@ -247,7 +276,7 @@ exports.season = season;
 const anime = async (slug) => {
     try {
         const base = await axios_1.default.get(`${BASEURL}/anime/${slug}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Anime not found");
         if (!$(".postbody").html()) {
             throw new Error("Anime not found");
         }
@@ -286,7 +315,7 @@ exports.anime = anime;
 const animeVideoSource = async (slug, ep) => {
     try {
         const base = await axios_1.default.get(`${BASEURL}/nonton-${slug}-episode-${ep}`);
-        const $ = cheerio_1.default.load(base.data);
+        const $ = loadHtml(base.data, "Episode not found");
         if (!$(".postbody").html()) {
             throw new Error("Episode not found");
         }
@@ -294,7 +323,7 @@ const animeVideoSource = async (slug, ep) => {
             .find("iframe")
             .attr("data-src");
         const videoSourceBase = await axios_1.default.get(embedUrl);
-        const $$ = cheerio_1.default.load(videoSourceBase.data);
+        const $$ = cheerio.load(videoSourceBase.data);
         if (!!$(".postbody .megavid .video-nav .iconx a").html()) {
             let enc = $$("script:not([src])")
                 .first()
@@ -305,15 +334,28 @@ const animeVideoSource = async (slug, ep) => {
             let getSrcs = JSON.parse(decrypt.match(/srcs\s*=\s*(\[.*\])/)[1]);
             let videoSource = [];
             const waitSrc = getSrcs.map(async (el, i) => {
-                const url = await axios_1.default.get(el.file, { maxRedirects: 0 });
-                let $$$ = cheerio_1.default.load(url.data);
-                let surl = $$$("a").attr("href");
-                return {
-                    quality: el.label === "HD" ? "720p" : el.label === "SD" ? "480p" : "Unknown",
-                    url: surl,
-                };
+                try {
+                    const url = await axios_1.default.get(el.file, { maxRedirects: 0 });
+                    let $$$ = cheerio.load(url.data);
+                    let surl = $$$("a").attr("href");
+                    return {
+                        quality: el.label === "HD" ? "720p" : el.label === "SD" ? "480p" : "Unknown",
+                        url: surl,
+                    };
+                }
+                catch (mediaErr) {
+                    // If one source fails, continue with others
+                    return { quality: el.label === "HD" ? "720p" : el.label === "SD" ? "480p" : "Unknown", url: "" };
+                }
             });
-            videoSource = await Promise.all(waitSrc);
+            const settled = await Promise.allSettled(waitSrc);
+            videoSource = settled
+                .filter((r) => r.status === "fulfilled")
+                .map((r) => r.value)
+                .filter((item) => item.url);
+            if (videoSource.length === 0) {
+                throw new Error("No valid video source available");
+            }
             return {
                 episode: ~~ep,
                 video: videoSource,

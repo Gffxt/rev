@@ -19,8 +19,8 @@ app.get("/", async (req, res) => {
 app.use("/kuramanime", kuramanime);
 app.use("/nanime", nanime);
 app.use("/kuronime", kuronime);
-// app.use("/otakudesu", otakudesu); //Url page streaming memakai slug yang berbeda
+app.use("/otakudesu", otakudesu);
 
-app.listen(process.env.PORT || 3001, () => {
+app.listen(process.env.PORT || 4040, () => {
   console.warn("\nReady 🚀");
 });

@@ -101,11 +101,11 @@ app.get("/anime/:animeSlug", async (req: any, res: any) => {
   }
 });
 
-app.get("/anime/:animeId/:episodeId", async (req: any, res: any) => {
+app.get("/anime/:animeTitle/:episodeId", async (req: any, res: any) => {
   try {
-    const id = req.params.animeId;
+    const title = req.params.animeTitle;
     const ep = req.params.episodeId;
-    const data = await animeVideoSource(id, ep);
+    const data = await animeVideoSource(title, ep);
     return res.status(200).json(data);
   } catch (err: any) {
     return res.status(500).json({

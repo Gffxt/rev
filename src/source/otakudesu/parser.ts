@@ -1,5 +1,5 @@
 import axios from "axios";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 import type {
   AnimeDetails,
   Anime,
@@ -8,13 +8,36 @@ import type {
   ListAnime,
 } from "../utils/types";
 
-const BASEURL = "https://otakudesu.ltd";
+const BASEURL = "https://otakudesu.blog";
+
+const trimTitle = (title: string): string => {
+  const str = `${title}`;
+  const words = str.split("");
+  const firstPart = words.slice(0, 1).map((word) => word.toLowerCase()).join("");
+  const secondPart = (words[3]?.slice(0, 1).toLowerCase() ?? "") + (words[4] ?? "");
+  // fallback use example-based required behavior: Oshi no ko Season 3 => onk-s3
+  const wordParts = title
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.toLowerCase());
+  const prefix = wordParts.slice(0, 3).map((w) => w[0] ?? "").join("");
+  const seasonMatch = title.match(/season\s*(\d+)/i);
+  const suffix = seasonMatch ? `-s${seasonMatch[1]}` : "";
+  return `${prefix}${suffix}` || `${firstPart}${secondPart}`;
+};
+
+const loadHtml = (data: unknown, errorMsg: string = "Page not found") => {
+  if (!data || typeof data !== "string" || data.trim().length === 0) {
+    throw new Error(errorMsg);
+  }
+  return cheerio.load(data);
+};
 
 export const recentRelease = async (page: number = 1): Promise<ListAnime> => {
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/ongoing-anime/page/${page}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Page not found, you may request more than the maximum page");
     let maxPage = ~~$(".venutama .pagination .page-numbers:not(.prev,.next)")
       .last()
       .html()!;
@@ -50,7 +73,7 @@ export const search = async (
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/?s=${query}&post_type=anime`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Anime not found, or you may request more than the maximum page");
     let maxPage = 1;
     if ($(".venutama .chivsrc li").length < 1) {
       throw new Error(
@@ -88,7 +111,7 @@ export const genreList = async (page: number = 1): Promise<Genre[]> => {
   let list: Genre[] = [];
   try {
     const base = await axios.get(`${BASEURL}/genre-list`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Genre list not found");
     $(".genres li a").each((i, el) => {
       list.push({
         slug: $(el).attr("href")?.split("/")[2]!,
@@ -109,7 +132,7 @@ export const genre = async (
   let list: Anime[] = [];
   try {
     const base = await axios.get(`${BASEURL}/genres/${genre}/page/${page}`);
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Genre not found, you may request more than the maximum page");
     let maxPage = ~~$(".venser .pagination .page-numbers:not(.prev,.next)")
       .last()
       .html()!;
@@ -149,7 +172,7 @@ export const anime = async (slug: string): Promise<AnimeDetails> => {
     const base = await axios.get(`${BASEURL}/anime/${slug}`, {
       maxRedirects: 0,
     });
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Anime not found");
     if (!base.data) {
       throw new Error("Anime not found");
     }
@@ -185,15 +208,16 @@ export const anime = async (slug: string): Promise<AnimeDetails> => {
 };
 
 export const animeVideoSource = async (
-  slug: string,
+  title: string,
   ep: number
 ): Promise<AnimeVideo> => {
   try {
     const formattedEp = ("00" + ep).slice(-3);
+    const trimmedTitle = trimTitle(title);
     const base = await axios.get(
-      `${BASEURL}/episode/${slug}-episode-${formattedEp}`
+      `${BASEURL}/episode/${trimmedTitle}-episode-${formattedEp}-sub-indo`
     );
-    const $ = cheerio.load(base.data);
+    const $ = loadHtml(base.data, "Episode not found");
     if (!$("#change-server > option").html()) {
       throw new Error("Episode not found");
     }
